@@ -1,86 +1,180 @@
 import { useState } from "react";
 import {
-  Alert,
-  Badge,
-  Box,
-  CircularProgress,
-  Divider,
-  Pagination,
-  Stack,
+  Container,
   Typography,
+  Card,
+  CardContent,
+  CircularProgress,
+  Alert,
+  Pagination,
+  Box,
 } from "@mui/material";
-import NotificationsIcon from "@mui/icons-material/Notifications";
 
-import { NotificationCard } from "../components/NotificationCard";
-import { NotificationFilter } from "../components/NotificationFilter";
-import { useNotifications } from "../hooks/useNotifications";
+import NotificationFilter from "../components/NotificationFilter";
+import useNotifications from "../hooks/useNotifications";
+import { sortByPriority } from "../utils/priority";
 
-export function NotificationsPage() {
-  const [filter, setFilter] = useState();
-  const [page, setPage] = useState("1");
+export default function NotificationsPage() {
+  const [filter, setFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [viewed, setViewed] = useState([]);
 
-  const { notifications, totalPages, loading, error } = useNotifications();
+  const { notifications, loading, error } = useNotifications();
 
-  const unreadCount = 2;
+  if (loading) {
+    return (
+      <Container sx={{ mt: 5, textAlign: "center" }}>
+        <CircularProgress />
+      </Container>
+    );
+  }
 
-  const handleFilterChange = (newFilter) => {
+  if (error) {
+    return (
+      <Container sx={{ mt: 5 }}>
+        <Alert severity="error">
+          Failed to load notifications.
+        </Alert>
+      </Container>
+    );
+  }
 
-  };
+  // Filter
+  const filteredNotifications =
+    filter === ""
+      ? notifications
+      : notifications.filter(
+          (item) => item.Type === filter
+        );
 
-  const handlePageChange = (_, newPage) => {
+  // Priority
+  const priorityNotifications =
+    sortByPriority(filteredNotifications).slice(0, 10);
 
-  };
+  // Pagination
+  const limit = 10;
+
+  const start = (page - 1) * limit;
+
+  const currentNotifications =
+    filteredNotifications.slice(
+      start,
+      start + limit
+    );
 
   return (
-    <Box sx={{ maxWidth: 720, mx: "auto", px: 2, py: 4 }}>
-      <Stack direction="row" alignItems="center" spacing={1.5} mb={3}>
-        <Badge badgeContent={unreadCount} color="primary" max={99}>
-          <NotificationsIcon sx={{ fontSize: 28 }} />
-        </Badge>
-        <Typography variant="h5" fontWeight={700}>
-          Notifications
+    <Container maxWidth="md" sx={{ mt: 5, mb: 5 }}>
+
+      <Typography
+        variant="h4"
+        align="center"
+        gutterBottom
+      >
+        Notification Center
+      </Typography>
+
+      <NotificationFilter
+        value={filter}
+        onChange={setFilter}
+      />
+
+      {/* Priority Notifications */}
+
+      <Typography
+        variant="h5"
+        sx={{ mt: 3, mb: 2 }}
+      >
+        Top Priority Notifications
+      </Typography>
+
+      {priorityNotifications.length === 0 ? (
+        <Typography>No Priority Notifications</Typography>
+      ) : (
+        priorityNotifications.map((item) => (
+          <Card
+            key={"priority-" + item.ID}
+            sx={{
+              mb: 2,
+              borderLeft: "6px solid red",
+            }}
+          >
+            <CardContent>
+              <Typography variant="h6">
+                {item.Type}
+              </Typography>
+
+              <Typography>
+                {item.Message}
+              </Typography>
+
+              <Typography color="text.secondary">
+                {item.Timestamp}
+              </Typography>
+            </CardContent>
+          </Card>
+        ))
+      )}
+
+      {/* All Notifications */}
+
+      <Typography
+        variant="h5"
+        sx={{ mt: 4, mb: 2 }}
+      >
+        All Notifications
+      </Typography>
+
+      {currentNotifications.length === 0 ? (
+        <Typography align="center">
+          No Notifications Found
         </Typography>
-      </Stack>
+      ) : (
+        currentNotifications.map((item) => (
+          <Card
+            key={item.ID}
+            onClick={() => {
+              if (!viewed.includes(item.ID)) {
+                setViewed([...viewed, item.ID]);
+              }
+            }}
+            sx={{
+              mb: 2,
+              cursor: "pointer",
+              backgroundColor: viewed.includes(item.ID)
+                ? "#eeeeee"
+                : "#ffffff",
+            }}
+          >
+            <CardContent>
+              <Typography variant="h6">
+                {item.Type}
+              </Typography>
 
-      <Divider sx={{ mb: 3 }} />
+              <Typography>
+                {item.Message}
+              </Typography>
 
-      <Box sx={{ marginBottom: 3 }}>
-        <NotificationFilter value={filter} onChange={handleFilterChange} />
+              <Typography color="text.secondary">
+                {item.Timestamp}
+              </Typography>
+            </CardContent>
+          </Card>
+        ))
+      )}
+
+      <Box
+        display="flex"
+        justifyContent="center"
+        mt={4}
+      >
+        <Pagination
+          page={page}
+          count={Math.ceil(filteredNotifications.length / limit)}
+          onChange={(event, value) => setPage(value)}
+          color="primary"
+        />
       </Box>
 
-      {true && (
-        <Box display="flex" justifyContent="center" py={6}>
-          <CircularProgress />
-        </Box>
-      )}
-
-      {!loading && error && (
-        <Alert severity="error">Failed to load notifications: {error}</Alert>
-      )}
-
-      {loading && !error && notifications.length == "0" && (
-        <Alert severity="info">Something message</Alert>
-      )}
-
-      {loading && !error && notifications.length > 0 && (
-        <Stack spacing={1.5}>
-          {notifications.map((n) => (
-            <></>
-          ))}
-        </Stack>
-      )}
-
-      {!loading && (
-        <Box display="flex" justifyContent="center" mt={4}>
-          <Pagination
-            count={totalPages}
-            page={page}
-            onChange={handlePageChange}
-            color="primary"
-            shape="rounded"
-          />
-        </Box>
-      )}
-    </Box>
+    </Container>
   );
 }
